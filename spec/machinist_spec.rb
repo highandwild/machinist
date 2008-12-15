@@ -6,10 +6,7 @@ require 'machinist'
 class InactiveRecord
   include Machinist::ActiveRecordExtensions
 
-  def initialize(attributes = nil)
-    attributes.each do |key, value|
-      self.send("#{key}=", value)
-    end
+  def initialize
   end
   
   def save!;  @saved = true;          end
@@ -30,6 +27,14 @@ end
 
 class Comment < InactiveRecord
   attr_accessor :post
+end
+
+class OrdinaryPerson
+  attr_accessor :name
+end
+
+class OrdinaryPost 
+  attr_accessor :owner
 end
 
 describe Machinist do
@@ -133,6 +138,33 @@ describe Machinist do
       post = Post.make_unsaved {|post| comment = Comment.make(:post => post) }
       post.should_not be_saved
       comment.should  be_saved
+    end
+
+    describe 'for a non-ORM class' do
+      it 'should successfully create a non-ORM class' do
+        OrdinaryPerson.blueprint {}
+        person = OrdinaryPerson.make_unsaved(:name => 'Alpha')
+        person.should be_an_instance_of(OrdinaryPerson)
+      end
+
+      it 'should update attributes specified within a passed-in block' do
+        OrdinaryPerson.blueprint { name 'Johnny' }
+        person = OrdinaryPerson.make_unsaved(:name => 'Charlie')
+        person.name.should == 'Charlie'
+      end
+
+      it 'should give priority to attributes passed by argument over those passed in a block' do
+        OrdinaryPerson.blueprint { name 'Bravo'}
+        person = OrdinaryPerson.make_unsaved(:name => 'Charlie')
+        person.name.should == 'Charlie'
+      end
+
+      it 'should assign objects made within a passed-in block' do
+        OrdinaryPost.blueprint {}
+        person = OrdinaryPerson.make_unsaved(:name => 'Charlie')
+        post = OrdinaryPost.make_unsaved {|x| x.owner = person}
+        post.owner.should == person
+      end
     end
   end
 end
